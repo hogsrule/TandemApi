@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using TandemApi.Objects;
+using TandemApi.Services;
 
 namespace TandemApi.Controllers
 {
@@ -11,17 +9,27 @@ namespace TandemApi.Controllers
     [Route("[controller]")]
     public class UserController : ControllerBase
     {
-
-        
         [HttpGet]
         public User Get(string emailAddress)
         {
+            var cosmosService = new CosmosService();
+            return cosmosService.GetUser(emailAddress);
 
-            return new User
+            
+        }
+        [HttpPost]
+        public bool Create([FromBody] User user)
+        {
+            try
             {
-                Name = "Test"
-            };
-
+                var cosmosService = new CosmosService();
+                cosmosService.CreateUser(user);
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
         }
     }
 }
