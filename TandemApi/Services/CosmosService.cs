@@ -60,14 +60,22 @@ namespace TandemApi.Services
 
         private Container GetContainer()
         {
-            var accountEndpoint = Configuration.GetSection("CosmosConnection").Value;
-            var authKeyOrResourceToken = Configuration.GetSection("AuthKey").Value;
-            var databaseName = Configuration.GetSection("DatabaseName").Value;
-            var containerName = Configuration.GetSection("UserContainerName").Value;
-            var cosmosClient = new CosmosClient(accountEndpoint, authKeyOrResourceToken);
-            var database = cosmosClient.GetDatabase(databaseName);
-            var container = database.GetContainer(containerName);
-            return container;
+            try
+            {
+                var accountEndpoint = Configuration.GetSection("CosmosConnection").Value;
+                var authKeyOrResourceToken = Configuration.GetSection("AuthKey").Value;
+                var databaseName = Configuration.GetSection("DatabaseName").Value;
+                var containerName = Configuration.GetSection("UserContainerName").Value;
+                var cosmosClient = new CosmosClient(accountEndpoint, authKeyOrResourceToken);
+                var database = cosmosClient.GetDatabase(databaseName);
+                var container = database.GetContainer(containerName);
+                return container;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw new Exception("Error Accessing Container. See inner exception for further details",e);
+            }
         }
     }
 }
