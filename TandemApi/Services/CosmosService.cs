@@ -1,26 +1,68 @@
-﻿using TandemApi.Objects;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Configuration;
+using TandemApi.Objects;
 
 namespace TandemApi.Services
 {
     public class CosmosService
     {
-        public void CreateUser(User user)
+        public CosmosService(IConfiguration configuration)
         {
-            //Save to Cosmos
+            Configuration = configuration;
         }
 
-
-        public User GetUser(string emailAddress)
+        public IConfiguration Configuration { get; }
+        public async Task CreateUser(TandemUser user)
         {
-            return new User()
+            user.id = Guid.NewGuid();
+            var container = GetContainer();
+            await container.CreateItemAsync(user);
+        }
+
+        public async Task<TandemUser> GetUser(string emailAddress)
+        {
+            var container = GetContainer();
+            var sqlQueryText = $"SELECT * FROM c WHERE c.emailAddress = '{emailAddress}'";
+            var queryDefinition = new QueryDefinition(sqlQueryText);
+            var queryResultSetIterator = container.GetItemQueryIterator<TandemUser>(queryDefinition);
+
+            var users = new List<TandemUser>();
+
+            while (queryResultSetIterator.HasMoreResults)
             {
-                UserId = "randomId",
-                FirstName = "First",
-                MiddleName = "Middle",
-                LastName = "Last",
-                PhoneNumber = "555-555-5555",
-                EmailAddress = emailAddress
-            };
+                FeedResponse<TandemUser> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+               foreach (TandemUser user in currentResultSet)
+                {
+                    users.Add(user);
+                }
+            }
+            
+            return users.FirstOrDefault();
+            // return new TandemUser()
+            // {
+            //     UserId = "randomId",
+            //     FirstName = "First",
+            //     MiddleName = "Middle",
+            //     LastName = "Last",
+            //     PhoneNumber = "555-555-5555",
+            //     EmailAddress = emailAddress
+            // };
+        }
+
+        private Container GetContainer()
+        {
+            var accountEndpoint = Configuration.GetSection("CosmosConnection").Value;
+            var authKeyOrResourceToken = Configuration.GetSection("AuthKey").Value;
+            var databaseName = Configuration.GetSection("DatabaseName").Value;
+            var containerName = Configuration.GetSection("UserContainerName").Value;
+            var cosmosClient = new CosmosClient(accountEndpoint, authKeyOrResourceToken);
+            var database = cosmosClient.GetDatabase(databaseName);
+            var container = database.GetContainer(containerName);
+            return container;
         }
     }
 }
