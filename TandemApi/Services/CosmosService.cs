@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
@@ -16,11 +17,16 @@ namespace TandemApi.Services
         }
 
         public IConfiguration Configuration { get; }
-        public async Task CreateUser(TandemUser user)
+        public async Task<Guid> CreateUser(TandemUser user)
         {
-            user.id = Guid.NewGuid();
-            var container = GetContainer();
-            await container.CreateItemAsync(user);
+            if (await GetUser(user.emailAddress) == null)
+            {
+                user.id = Guid.NewGuid();
+                var container = GetContainer();
+                await container.CreateItemAsync(user);
+                return user.id;
+            }
+            throw new Exception($"User with Email Address : {user.emailAddress} already exists");
         }
 
         public async Task<TandemUser> GetUser(string emailAddress)
@@ -40,7 +46,6 @@ namespace TandemApi.Services
                     users.Add(user);
                 }
             }
-            
             return users.FirstOrDefault();
             // return new TandemUser()
             // {

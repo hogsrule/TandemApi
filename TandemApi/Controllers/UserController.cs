@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using TandemApi.Objects;
@@ -21,39 +22,43 @@ namespace TandemApi.Controllers
                 cfg.CreateMap<TandemUser, ReturnUser>()
                     .ForMember(dest => dest.name, act => act.MapFrom(src => $"{src.firstName} {src.middleName} {src.lastName}"))
                     .ForMember(dest => dest.userId, act => act.MapFrom(src => src.id)));
-
         }
 
-
         [HttpGet]
-        public async Task<ReturnUser> Get(string emailAddress)
+        public async Task<IActionResult> Get(string emailAddress)
         {
             try
             {
                 var cosmosService = new CosmosService(Configuration);
                 var tandemUser = await cosmosService.GetUser(emailAddress);
+                if (tandemUser == null)
+                {
+                    throw new Exception($"No User found with Email Address {emailAddress}");
+                }
                 var mapper = new Mapper(Config);
                 var returnUser = mapper.Map<ReturnUser>(tandemUser);
-                return returnUser;
+                return Ok(returnUser);
             }
             catch (Exception e)
             {
-                throw;
+                Console.WriteLine(e);
+                return StatusCode(StatusCodes.Status500InternalServerError, e.GetFullMessage());
             }
             
         }
         [HttpPost]
-        public async Task<bool> Create([FromBody] TandemUser user)
+        public async Task<IActionResult> Create([FromBody] TandemUser user)
         {
             try
             {
                 var cosmosService = new CosmosService(Configuration);
-                await cosmosService.CreateUser(user);
-                return true;
+                var userId = await cosmosService.CreateUser(user);
+                return Ok($"User successfully created with id {userId}");
             }
             catch (Exception e)
             {
-                return false;
+                Console.WriteLine(e);
+                return StatusCode(StatusCodes.Status500InternalServerError, e.GetFullMessage());
             }
         }
     }
